@@ -409,7 +409,7 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
   };
 
   const I18N = {
-    pl: { save:"Zapisz pomiar (do historii)", newBusbar:"Nowy pomiar (Wyczyść)", charts:"Wizualizacja (Wykresy)", viewHistory:"Historia (CSV/Edycja)", importCsv:"Importuj CSV", exportCsv:"Eksportuj CSV", showOnlyNok:"Pokaż tylko NOK", copied:"Skopiowano.", saved:"Zapisano do historii.", cleared:"Wyczyszczono.", chooseCsv:"Włącz autozapis do CSV", history:"Historia pomiarów", open:"Otwórz", edit:"Załaduj do edycji", del:"Usuń", close:"Zamknij", applyFilter:"Zastosuj filtr", clearFilter:"Wyczyść filtr" },
+    pl: { save:"Zapisz pomiar", newBusbar:"Nowy pomiar (Wyczyść)", charts:"Wizualizacja (Wykresy)", viewHistory:"Historia (CSV/Edycja)", importCsv:"Importuj CSV", exportCsv:"Eksportuj CSV", showOnlyNok:"Pokaż tylko NOK", copied:"Skopiowano.", saved:"Zapisano.", cleared:"Wyczyszczono.", chooseCsv:"Włącz autozapis do CSV", history:"Historia pomiarów", open:"Otwórz", edit:"Załaduj do edycji", del:"Usuń", close:"Zamknij", applyFilter:"Zastosuj filtr", clearFilter:"Wyczyść filtr" },
     en: { save:"Save Measurement (to History)", newBusbar:"New Busbar (Clear)", charts:"Visualization (Charts)", viewHistory:"View History (CSV/Edit)", importCsv:"Import CSV", exportCsv:"Export CSV", showOnlyNok:"Show only NOK", copied:"Copied.", saved:"Saved to history.", cleared:"Cleared.", chooseCsv:"Enable CSV autosave", history:"Measurements History", open:"Open", edit:"Load for edit", del:"Delete", close:"Close", applyFilter:"Apply Filter", clearFilter:"Clear Filter" },
     de: { save:"Messung speichern (in Verlauf)", newBusbar:"Neue Messung (Leeren)", charts:"Visualisierung (Charts)", viewHistory:"Verlauf (CSV/Bearbeiten)", importCsv:"CSV importieren", exportCsv:"CSV exportieren", showOnlyNok:"Nur NOK anzeigen", copied:"Kopiert.", saved:"In Verlauf gespeichert.", cleared:"Gelöscht.", chooseCsv:"CSV-Autospeichern aktivieren", history:"Messungsverlauf", open:"Öffnen", edit:"Zum Bearbeiten laden", del:"Löschen", close:"Schließen", applyFilter:"Filter anwenden", clearFilter:"Filter löschen" }
   };
@@ -436,20 +436,23 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
   const loadLS = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch { return fb; } };
   const saveLS = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
-  function defaultTypes(){
-    const make=(name,n,min=-0.10,max=0.10)=>({ id:uid(), name, points:n,
-      tolA:Array.from({length:n}, _=>({min,max})), tolB:Array.from({length:n}, _=>({min,max})), version:1 });
-    return [ make("HVDS-Gen6-10pt",10), make("HVDS-Gen6-12pt",12), make("HVDS-Gen6-16pt",16) ];
-  }
   function ensureTypes(){
     state.types = loadLS(LS_KEYS.TYPES, []);
-    if(!state.types.length){ state.types = defaultTypes(); saveLS(LS_KEYS.TYPES, state.types); }
-    if(!state.currentTypeId) state.currentTypeId = state.types[0].id;
+    if (state.types.length === 0) {
+      state.currentTypeId = null;
+    } else if (!state.types.some(t => t.id === state.currentTypeId)) {
+      state.currentTypeId = state.types[0].id;
+    }
   }
-  function getCurrentType(){ return state.types.find(t=>t.id===state.currentTypeId) || state.types[0]; }
+  function getCurrentType(){ return state.types.find(t=>t.id===state.currentTypeId) || state.types[0] || null; }
 
   function ensureMeasurement(){
-    const t=getCurrentType();
+    const t = getCurrentType();
+    if (!t) {
+      state.currentMeasurement = { id: uid(), points: [], typeId: null };
+      updateNokCount();
+      return;
+    }
     state.currentMeasurement = { id:uid(), qr:$("#busbarQR")?.value?.trim()||"", typeId:t.id,
       operator:$("#operator")?.value?.trim()||"", station:$("#station")?.value?.trim()||"",
       measuredAt: $("#measuredAt")?.value || nowLocalInput(),
@@ -468,6 +471,10 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
 
   function buildTable(){
     const t=getCurrentType(); const tb=$("#measureTbody"); if(!tb) return; tb.innerHTML="";
+    if (!t) {
+      tb.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Please create a new Busbar Type to begin.</td></tr>';
+      return;
+    }
     for(let i=0;i<t.points;i++){
       const tr=document.createElement("tr"); tr.className="trow";
       tr.innerHTML=`
@@ -485,6 +492,10 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
   function buildViz(){
     const t=getCurrentType(); const svg=$("#viz"); if(!svg) return;
     svg.querySelectorAll(".ptg").forEach(n=>n.remove());
+    if (!t) {
+      $("#vizHint") && ($("#vizHint").style.display = 'none');
+      return;
+    }
     const startX=60, endX=940, y=120;
     for(let i=0;i<t.points;i++){
       const x=startX + (i*(endX-startX)/(t.points-1 || 1));
@@ -506,7 +517,9 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
   }
 
   function updateRowStatus(i){
-    const t=getCurrentType(); const row=$("#measureTbody").children[i];
+    const t=getCurrentType();
+    if (!t) return;
+    const row=$("#measureTbody").children[i];
     const aVal=parseNum(row.querySelector('input[data-plane="A"]').value);
     const bVal=parseNum(row.querySelector('input[data-plane="B"]').value);
     const inA= aVal==null ? null : (aVal>=t.tolA[i].min && aVal<=t.tolA[i].max);
@@ -603,6 +616,7 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
 
   function buildTrendChart(ptIndex, typeIdFilter=null, fromDate=null, toDate=null){
     if(state.charts.trend){ state.charts.trend.destroy(); state.charts.trend=null; }
+    if (ptIndex < 0) return;
     let data = state.measurements.filter(m => m.points && m.points.length > ptIndex);
     if (typeIdFilter) data = data.filter(m => m.typeId === typeIdFilter);
     if (fromDate) data = data.filter(m => m.measuredAt >= fromDate);
@@ -655,14 +669,14 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
   function openTypeModal(edit=false){
     $("#modalTitle").textContent = edit ? "Edit Busbar Type" : "New Busbar Type";
     const t = getCurrentType();
-    $("#m_name").value = edit ? t.name : "";
+    $("#m_name").value = edit && t ? t.name : "";
     const mp = $("#m_points"); mp.innerHTML="";
     const z = document.createElement("option"); z.value="0"; z.textContent="0 points"; mp.appendChild(z);
     for(let n=2;n<=20;n++){ const o=document.createElement("option"); o.value=n; o.textContent=n+" points"; mp.appendChild(o); }
-    mp.value = edit ? t.points : "0";
-    $("#m_tolMin").value = edit ? t.tolA[0].min : -0.10;
-    $("#m_tolMax").value = edit ? t.tolA[0].max : 0.10;
-    renderPtTablePreview(edit ? t : {points: +(mp.value)||0, tolA:[], tolB:[]}, edit);
+    mp.value = edit && t ? t.points : "0";
+    $("#m_tolMin").value = edit && t ? t.tolA[0].min : -0.10;
+    $("#m_tolMax").value = edit && t ? t.tolA[0].max : 0.10;
+    renderPtTablePreview(edit && t ? t : {points: +(mp.value)||0, tolA:[], tolB:[]}, edit);
     $("#deleteTypeBtn").style.display = edit ? "" : "none";
     $("#typeModal").showModal();
   }
@@ -695,11 +709,31 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
     $("#operator") && ($("#operator").value = localStorage.getItem(LS_KEYS.LAST_OPERATOR) || "");
     $("#station") && ($("#station").value  = localStorage.getItem(LS_KEYS.LAST_STATION)  || "");
     $("#measuredAt") && ($("#measuredAt").value = nowLocalInput());
-    renderTypeSelect(); ensureMeasurement(); buildTable(); buildViz(); bindInputs();
 
-    $("#typeSelect")?.addEventListener("change", e=>{ state.currentTypeId=e.target.value; ensureMeasurement(); buildTable(); buildViz(); });
+    renderTypeSelect();
+    ensureMeasurement();
+    buildTable();
+    buildViz();
+    bindInputs();
+
+    if (state.types.length === 0) {
+      openTypeModal(false);
+    }
+
+    $("#typeSelect")?.addEventListener("change", e=>{
+      state.currentTypeId=e.target.value;
+      ensureMeasurement();
+      buildTable();
+      buildViz();
+    });
     $("#addTypeBtn")?.addEventListener("click", ()=>openTypeModal(false));
-    $("#editTypeBtn")?.addEventListener("click", ()=>openTypeModal(true));
+    $("#editTypeBtn")?.addEventListener("click", ()=>{
+      if (getCurrentType()) {
+        openTypeModal(true)
+      } else {
+        alert('No type selected to edit. Please create one first.');
+      }
+    });
     $("#closeTypeModal")?.addEventListener("click", ()=>$("#typeModal").close());
     $("#m_points")?.addEventListener("change", e=>renderPtTablePreview({points:+e.target.value, tolA:[], tolB:[]}, false));
     $("#copyDown")?.addEventListener("click", ()=>{
@@ -721,7 +755,11 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
       const tolB=Array.from({length:n}, (_,i)=>({ min:parseNum(document.querySelector(`.ptBmin[data-i="${i}"]`).value), max:parseNum(document.querySelector(`.ptBmax[data-i="${i}"]`).value) }));
       const editing = $("#modalTitle").textContent.startsWith("Edit");
       if(editing){ const t=getCurrentType(); t.name=name; t.points=n; t.tolA=tolA; t.tolB=tolB; t.version=(t.version||1)+1; }
-      else { state.types.push({ id:Math.random().toString(36).slice(2,10), name, points:n, tolA, tolB, version:1 }); state.currentTypeId = state.types[state.types.length-1].id; }
+      else {
+        const newType = { id:uid(), name, points:n, tolA, tolB, version:1 };
+        state.types.push(newType);
+        state.currentTypeId = newType.id;
+      }
       saveLS(LS_KEYS.TYPES, state.types);
       renderTypeSelect(); ensureMeasurement(); buildTable(); buildViz(); $("#typeModal").close();
     });
@@ -729,20 +767,32 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
       const t=getCurrentType(); if(!t) return;
       if(!confirm(`Delete type "${t.name}"?`)) return;
       state.types = state.types.filter(x=>x.id!==t.id);
-      if(!state.types.length) state.types = defaultTypes();
-      state.currentTypeId = state.types[0].id;
-      saveLS(LS_KEYS.TYPES, state.types); renderTypeSelect(); ensureMeasurement(); buildTable(); buildViz(); $("#typeModal").close();
+      state.currentTypeId = state.types.length > 0 ? state.types[0].id : null;
+      saveLS(LS_KEYS.TYPES, state.types);
+      renderTypeSelect();
+      ensureMeasurement();
+      buildTable();
+      buildViz();
+      $("#typeModal").close();
+      if (state.types.length === 0) {
+        openTypeModal(false);
+      }
     });
 
     $("#saveMeasurementBtn")?.addEventListener("click", async ()=>{
+      const currentType = getCurrentType();
+      if (!currentType) {
+        alert("Please select or create a busbar type first.");
+        return;
+      }
       state.currentMeasurement.qr=$("#busbarQR").value.trim();
-      state.currentMeasurement.typeId=getCurrentType().id;
+      state.currentMeasurement.typeId=currentType.id;
       state.currentMeasurement.operator=$("#operator").value.trim();
       state.currentMeasurement.station=$("#station").value.trim();
       state.currentMeasurement.measuredAt=$("#measuredAt").value || nowLocalInput();
       localStorage.setItem(LS_KEYS.LAST_OPERATOR, state.currentMeasurement.operator);
       localStorage.setItem(LS_KEYS.LAST_STATION, state.currentMeasurement.station);
-      const t=getCurrentType(); for(let i=0;i<t.points;i++) updateRowStatus(i);
+      for(let i=0;i<currentType.points;i++) updateRowStatus(i);
       const snapshot = JSON.parse(JSON.stringify(state.currentMeasurement));
       state.measurements.push(snapshot); saveHistory();
       const appended = await appendToCsv(snapshot);
@@ -766,8 +816,11 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
       $("#currentBusbarQr").textContent = state.currentMeasurement.qr || "(current)";
       buildSingleCharts(state.currentMeasurement);
       const t=getCurrentType(); const sel=$("#trendPointSelect"); sel.innerHTML="";
-      for(let i=0;i<t.points;i++){ const o=document.createElement("option"); o.value=i; o.textContent="Point "+(i+1); sel.appendChild(o); }
-      sel.value="0"; buildTrendChart(0);
+      if (t) {
+        for(let i=0;i<t.points;i++){ const o=document.createElement("option"); o.value=i; o.textContent="Point "+(i+1); sel.appendChild(o); }
+        sel.value="0";
+      }
+      buildTrendChart(t ? 0 : -1);
       $("#closeChartsModal").onclick = ()=>$("#chartsModal").close();
       $("#chartsModal").showModal();
     });
@@ -806,7 +859,10 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
     $("#closeHistoryModal")?.addEventListener("click", ()=>$("#historyModal").close());
     $("#enableCsvBtn")?.addEventListener("click", async ()=>{ await ensureCsvHandle(); });
 
-    const t=getCurrentType(); for(let i=0;i<t.points;i++) updateRowStatus(i);
+    const t=getCurrentType();
+    if (t) {
+      for(let i=0;i<t.points;i++) updateRowStatus(i);
+    }
     if (window["chartjs-plugin-annotation"]) { Chart.register(window["chartjs-plugin-annotation"]); }
     if (window.ChartAnnotation) { try { Chart.register(window.ChartAnnotation); } catch(e){} }
   }
