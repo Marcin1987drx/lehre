@@ -409,24 +409,337 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
   };
 
   const I18N = {
-    pl: { save:"Zapisz pomiar", newBusbar:"Nowy pomiar (Wyczyść)", charts:"Wizualizacja (Wykresy)", viewHistory:"Historia (CSV/Edycja)", importCsv:"Importuj CSV", exportCsv:"Eksportuj CSV", showOnlyNok:"Pokaż tylko NOK", copied:"Skopiowano.", saved:"Zapisano.", cleared:"Wyczyszczono.", chooseCsv:"Włącz autozapis do CSV", history:"Historia pomiarów", open:"Otwórz", edit:"Załaduj do edycji", del:"Usuń", close:"Zamknij", applyFilter:"Zastosuj filtr", clearFilter:"Wyczyść filtr" },
-    en: { save:"Save Measurement (to History)", newBusbar:"New Busbar (Clear)", charts:"Visualization (Charts)", viewHistory:"View History (CSV/Edit)", importCsv:"Import CSV", exportCsv:"Export CSV", showOnlyNok:"Show only NOK", copied:"Copied.", saved:"Saved to history.", cleared:"Cleared.", chooseCsv:"Enable CSV autosave", history:"Measurements History", open:"Open", edit:"Load for edit", del:"Delete", close:"Close", applyFilter:"Apply Filter", clearFilter:"Clear Filter" },
-    de: { save:"Messung speichern (in Verlauf)", newBusbar:"Neue Messung (Leeren)", charts:"Visualisierung (Charts)", viewHistory:"Verlauf (CSV/Bearbeiten)", importCsv:"CSV importieren", exportCsv:"CSV exportieren", showOnlyNok:"Nur NOK anzeigen", copied:"Kopiert.", saved:"In Verlauf gespeichert.", cleared:"Gelöscht.", chooseCsv:"CSV-Autospeichern aktivieren", history:"Messungsverlauf", open:"Öffnen", edit:"Zum Bearbeiten laden", del:"Löschen", close:"Schließen", applyFilter:"Filter anwenden", clearFilter:"Filter löschen" }
+    pl: {
+        app_title: "DRAEXLMAIER",
+        app_subtitle: "KONTROLER SZYNOPRZEWODÓW",
+        section_identification: "Identyfikacja i Zapis",
+        label_qr: "Kod QR szynoprzewodu",
+        ph_scan_enter: "Zeskanuj lub wprowadź...",
+        label_type: "Typ szynoprzewodu",
+        tip_new_type: "Utwórz nowy typ szynoprzewodu",
+        btn_new_type: "+ Nowy",
+        tip_edit_type: "Edytuj wybrany typ",
+        btn_edit_type: "Edytuj",
+        label_operator: "Operator",
+        ph_operator: "np. M.Nowak",
+        label_station: "ID Stacji",
+        ph_station: "np. STN-01",
+        label_date: "Data pomiaru",
+        label_status: "Status",
+        chip_nok: "NOK:",
+        btn_show_nok: "Pokaż tylko NOK",
+        btn_save: "Zapisz pomiar (do Historii)",
+        btn_new_busbar: "Nowy szynoprzewód (Wyczyść)",
+        btn_history: "Zobacz historię (CSV/Edycja)",
+        btn_charts: "Wizualizacja (Wykresy)",
+        btn_import: "Importuj CSV",
+        section_viz: "Wizualizacja punktów",
+        tip_click_point: "Kliknij punkt, aby zaznaczyć pole.",
+        section_measurements: "Pomiary",
+        tip_values_mm: "Wartości w mm. Przecinek jest automatycznie zamieniany na kropkę.",
+        th_point: "Punkt",
+        th_mic_a: "Mikrometr A (n)",
+        th_mic_b: "Mikrometr B (n.1)",
+        th_tolerance: "Tolerancja (A / B)",
+        th_status: "Status",
+        footer_text: "stworzone przez (Q-Support) Marcin Szymański",
+        modal_type_title: "Nowy typ szynoprzewodu",
+        label_type_name: "Nazwa typu",
+        ph_type_name: "np. HVDS-Gen6-Short",
+        label_point_count: "Liczba punktów (parzysta)",
+        label_default_tolerance: "Domyślna tolerancja (do kopiowania)",
+        ph_min: "Min",
+        ph_max: "Maks",
+        label_tol_per_point: "Tolerancje na punkt (A=n, B=n.1)",
+        btn_copy_down: "Kopiuj Min/Max w dół",
+        btn_reset_default: "Resetuj do domyślnych",
+        btn_delete_type: "Usuń typ",
+        btn_save_type: "Zapisz typ",
+        tip_version_increment: "Zmiana tolerancji zwiększa wersję typu.",
+        modal_history_title: "Historia pomiarów",
+        btn_set_export_folder: "Ustaw folder eksportu",
+        btn_export_all: "Eksportuj wszystko (CSV)",
+        th_qr_type: "QR / Typ",
+        th_operator_station: "Operator / Stacja",
+        th_date: "Data",
+        th_actions: "Akcje",
+        modal_charts_title: "Wykresy",
+        label_date_from: "Data od",
+        label_date_to: "Data do",
+        btn_apply_filter: "Zastosuj filtr",
+        btn_clear_filter: "Wyczyść filtr",
+        chart_single_title_prefix: "Wykres dla wybranej szyny:",
+        opt_load_history: "— Załaduj z historii —",
+        chart_plane_a: "Płaszczyzna A (1, 2, 3...)",
+        chart_plane_b: "Płaszczyzna B (1.1, 2.1, 3.1...)",
+        chart_trend_title: "Trend dla wybranego punktu (Wszystkie szyny)",
+        label_select_point: "Wybierz punkt:",
+        modal_import_title: "Importuj pomiary z CSV",
+        tip_import_csv: "Wybierz jeden lub więcej plików CSV...",
+        btn_start_import: "Rozpocznij import",
+        edit: "Edytuj"
+    },
+    en: {
+        app_title: "DRAEXLMAIER",
+        app_subtitle: "BUSBAR CHECKER",
+        section_identification: "Identification and Save",
+        label_qr: "Busbar QR",
+        ph_scan_enter: "Scan or Enter...",
+        label_type: "Busbar Type",
+        tip_new_type: "Create a new busbar type",
+        btn_new_type: "+ New",
+        tip_edit_type: "Edit the selected type",
+        btn_edit_type: "Edit",
+        label_operator: "Operator",
+        ph_operator: "e.g. M.Nowak",
+        label_station: "Station ID",
+        ph_station: "e.g. STN-01",
+        label_date: "Measurement Date",
+        label_status: "Status",
+        chip_nok: "NOK:",
+        btn_show_nok: "Show only NOK",
+        btn_save: "Save Measurement (to History)",
+        btn_new_busbar: "New Busbar (Clear)",
+        btn_history: "View History (CSV/Edit)",
+        btn_charts: "Visualization (Charts)",
+        btn_import: "Import CSV",
+        section_viz: "Point Visualization",
+        tip_click_point: "Click a point to focus field.",
+        section_measurements: "Measurements",
+        tip_values_mm: "Values in mm. Comma is automatically replaced by dot.",
+        th_point: "Point",
+        th_mic_a: "Mic A (n)",
+        th_mic_b: "Mic B (n.1)",
+        th_tolerance: "Tolerance (A / B)",
+        th_status: "Status",
+        footer_text: "created by (Q-Support) Marcin Szymański",
+        modal_type_title: "New Busbar Type",
+        label_type_name: "Type Name",
+        ph_type_name: "e.g. HVDS-Gen6-Short",
+        label_point_count: "Number of Points (Even)",
+        label_default_tolerance: "Default Tolerance (for copying)",
+        ph_min: "Min",
+        ph_max: "Max",
+        label_tol_per_point: "Tolerances per Point (A=n, B=n.1)",
+        btn_copy_down: "Copy Min/Max Down",
+        btn_reset_default: "Reset to Default",
+        btn_delete_type: "Delete Type",
+        btn_save_type: "Save Type",
+        tip_version_increment: "Changing tolerance increments type version.",
+        modal_history_title: "Measurement History",
+        btn_set_export_folder: "Set Export Folder",
+        btn_export_all: "Export All (CSV)",
+        th_qr_type: "QR / Type",
+        th_operator_station: "Operator / Station",
+        th_date: "Date",
+        th_actions: "Actions",
+        modal_charts_title: "Charts",
+        label_date_from: "Date From",
+        label_date_to: "Date To",
+        btn_apply_filter: "Apply Filter",
+        btn_clear_filter: "Clear Filter",
+        chart_single_title_prefix: "Chart for Selected Busbar:",
+        opt_load_history: "— Load from History —",
+        chart_plane_a: "A-Plane (1, 2, 3...)",
+        chart_plane_b: "B-Plane (1.1, 2.1, 3.1...)",
+        chart_trend_title: "Trend for Selected Point (All Busbars)",
+        label_select_point: "Select Point:",
+        modal_import_title: "Import Measurements from CSV",
+        tip_import_csv: "Select one or more CSV files...",
+        btn_start_import: "Start Import",
+        edit: "Edit"
+    },
+    de: {
+        app_title: "DRAEXLMAIER",
+        app_subtitle: "SAMMELSCHIENEN-PRÜFER",
+        section_identification: "Identifikation und Speichern",
+        label_qr: "Sammelschienen-QR",
+        ph_scan_enter: "Scannen oder eingeben...",
+        label_type: "Sammelschienentyp",
+        tip_new_type: "Neuen Sammelschienentyp erstellen",
+        btn_new_type: "+ Neu",
+        tip_edit_type: "Ausgewählten Typ bearbeiten",
+        btn_edit_type: "Bearbeiten",
+        label_operator: "Bediener",
+        ph_operator: "z.B. M.Nowak",
+        label_station: "Stations-ID",
+        ph_station: "z.B. STN-01",
+        label_date: "Messdatum",
+        label_status: "Status",
+        chip_nok: "NOK:",
+        btn_show_nok: "Nur NOK anzeigen",
+        btn_save: "Messung speichern (in Historie)",
+        btn_new_busbar: "Neue Sammelschiene (Löschen)",
+        btn_history: "Historie anzeigen (CSV/Bearbeiten)",
+        btn_charts: "Visualisierung (Diagramme)",
+        btn_import: "CSV importieren",
+        section_viz: "Punktvisualisierung",
+        tip_click_point: "Klicken Sie auf einen Punkt, um das Feld zu fokussieren.",
+        section_measurements: "Messungen",
+        tip_values_mm: "Werte in mm. Komma wird automatisch durch Punkt ersetzt.",
+        th_point: "Punkt",
+        th_mic_a: "Mikrometer A (n)",
+        th_mic_b: "Mikrometer B (n.1)",
+        th_tolerance: "Toleranz (A / B)",
+        th_status: "Status",
+        footer_text: "erstellt von (Q-Support) Marcin Szymański",
+        modal_type_title: "Neuer Sammelschienentyp",
+        label_type_name: "Typname",
+        ph_type_name: "z.B. HVDS-Gen6-Short",
+        label_point_count: "Anzahl der Punkte (gerade)",
+        label_default_tolerance: "Standardtoleranz (zum Kopieren)",
+        ph_min: "Min",
+        ph_max: "Max",
+        label_tol_per_point: "Toleranzen pro Punkt (A=n, B=n.1)",
+        btn_copy_down: "Min/Max nach unten kopieren",
+        btn_reset_default: "Auf Standard zurücksetzen",
+        btn_delete_type: "Typ löschen",
+        btn_save_type: "Typ speichern",
+        tip_version_increment: "Das Ändern der Toleranz erhöht die Typversion.",
+        modal_history_title: "Messhistorie",
+        btn_set_export_folder: "Exportordner festlegen",
+        btn_export_all: "Alles exportieren (CSV)",
+        th_qr_type: "QR / Typ",
+        th_operator_station: "Bediener / Station",
+        th_date: "Datum",
+        th_actions: "Aktionen",
+        modal_charts_title: "Diagramme",
+        label_date_from: "Datum von",
+        label_date_to: "Datum bis",
+        btn_apply_filter: "Filter anwenden",
+        btn_clear_filter: "Filter löschen",
+        chart_single_title_prefix: "Diagramm für ausgewählte Sammelschiene:",
+        opt_load_history: "— Aus Historie laden —",
+        chart_plane_a: "A-Ebene (1, 2, 3...)",
+        chart_plane_b: "B-Ebene (1.1, 2.1, 3.1...)",
+        chart_trend_title: "Trend für ausgewählten Punkt (Alle Sammelschienen)",
+        label_select_point: "Punkt auswählen:",
+        modal_import_title: "Messungen aus CSV importieren",
+        tip_import_csv: "Wählen Sie eine oder mehrere CSV-Dateien...",
+        btn_start_import: "Import starten",
+        edit: "Bearbeiten"
+    },
+    ro: {
+        app_title: "DRAEXLMAIER",
+        app_subtitle: "VERIFICATOR BARE COLECTOARE",
+        section_identification: "Identificare și Salvare",
+        label_qr: "QR Bară Colectoare",
+        ph_scan_enter: "Scanați sau introduceți...",
+        label_type: "Tip Bară Colectoare",
+        tip_new_type: "Creați un tip nou de bară",
+        btn_new_type: "+ Nou",
+        tip_edit_type: "Editați tipul selectat",
+        btn_edit_type: "Editare",
+        label_operator: "Operator",
+        ph_operator: "ex. M.Popescu",
+        label_station: "ID Stație",
+        ph_station: "ex. STN-01",
+        label_date: "Data Măsurătorii",
+        label_status: "Status",
+        chip_nok: "NOK:",
+        btn_show_nok: "Arată doar NOK",
+        btn_save: "Salvează Măsurătoare (în Istoric)",
+        btn_new_busbar: "Bară Nouă (Curăță)",
+        btn_history: "Vezi Istoric (CSV/Editare)",
+        btn_charts: "Vizualizare (Grafice)",
+        btn_import: "Importă CSV",
+        section_viz: "Vizualizare Puncte",
+        tip_click_point: "Faceți clic pe un punct pentru a focaliza câmpul.",
+        section_measurements: "Măsurători",
+        tip_values_mm: "Valori în mm. Virgula este înlocuită automat cu punct.",
+        th_point: "Punct",
+        th_mic_a: "Micrometru A (n)",
+        th_mic_b: "Micrometru B (n.1)",
+        th_tolerance: "Toleranță (A / B)",
+        th_status: "Status",
+        footer_text: "creat de (Q-Support) Marcin Szymański",
+        modal_type_title: "Tip Nou de Bară Colectoare",
+        label_type_name: "Nume Tip",
+        ph_type_name: "ex. HVDS-Gen6-Scurt",
+        label_point_count: "Număr de Puncte (Par)",
+        label_default_tolerance: "Toleranță Implicită (pentru copiere)",
+        ph_min: "Min",
+        ph_max: "Max",
+        label_tol_per_point: "Toleranțe pe Punct (A=n, B=n.1)",
+        btn_copy_down: "Copiază Min/Max în Jos",
+        btn_reset_default: "Resetează la Implicit",
+        btn_delete_type: "Șterge Tip",
+        btn_save_type: "Salvează Tip",
+        tip_version_increment: "Schimbarea toleranței incrementează versiunea tipului.",
+        modal_history_title: "Istoric Măsurători",
+        btn_set_export_folder: "Setează Folder Export",
+        btn_export_all: "Exportă Tot (CSV)",
+        th_qr_type: "QR / Tip",
+        th_operator_station: "Operator / Stație",
+        th_date: "Data",
+        th_actions: "Acțiuni",
+        modal_charts_title: "Grafice",
+        label_date_from: "Data de la",
+        label_date_to: "Data până la",
+        btn_apply_filter: "Aplică Filtru",
+        btn_clear_filter: "Curăță Filtru",
+        chart_single_title_prefix: "Grafic pentru Bara Selectată:",
+        opt_load_history: "— Încarcă din Istoric —",
+        chart_plane_a: "Plan A (1, 2, 3...)",
+        chart_plane_b: "Plan B (1.1, 2.1, 3.1...)",
+        chart_trend_title: "Trend pentru Punctul Selectat (Toate Barele)",
+        label_select_point: "Selectează Punct:",
+        modal_import_title: "Importă Măsurători din CSV",
+        tip_import_csv: "Selectați unul sau mai multe fișiere CSV...",
+        btn_start_import: "Pornește Importul",
+        edit: "Editare"
+    }
   };
   function setLang(l){
-    state.lang = ["pl","en","de"].includes(l) ? l : "pl";
+    state.lang = ["pl","en","de","ro"].includes(l) ? l : "pl";
     localStorage.setItem(LS_KEYS.LAST_LANG, state.lang);
-    const txt = I18N[state.lang];
-    $("#saveMeasurementBtn") && ($("#saveMeasurementBtn").textContent = txt.save);
-    $("#newMeasurementBtn") && ($("#newMeasurementBtn").textContent = txt.newBusbar);
-    $("#showChartsBtn") && ($("#showChartsBtn").textContent = txt.charts);
-    $("#viewHistoryBtn") && ($("#viewHistoryBtn").textContent = txt.viewHistory);
-    $("#importCsvBtn") && ($("#importCsvBtn").textContent = txt.importCsv);
-    $("#exportCsv") && ($("#exportCsv").textContent = txt.exportCsv);
-    $("#toggleNok") && ($("#toggleNok").textContent = txt.showOnlyNok);
-    $("#applyFilterBtn") && ($("#applyFilterBtn").textContent = txt.applyFilter);
-    $("#clearFilterBtn") && ($("#clearFilterBtn").textContent = txt.clearFilter);
-    $("#historyTitle") && ($("#historyTitle").textContent = txt.history);
+    document.documentElement.lang = state.lang;
+
+    $$("#langContainer .flag-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.langKey.toLowerCase() === state.lang);
+    });
+
+    const translations = I18N[state.lang];
+    if (!translations) return;
+
+    $$("[data-lang]").forEach(el => {
+        const key = el.getAttribute("data-lang");
+        if (translations[key]) {
+            el.textContent = translations[key];
+        }
+    });
+
+    $$("[data-lang-placeholder]").forEach(el => {
+        const key = el.getAttribute("data-lang-placeholder");
+        if (translations[key]) {
+            el.placeholder = translations[key];
+        }
+    });
+
+    $$("[data-lang-title]").forEach(el => {
+        const key = el.getAttribute("data-lang-title");
+        if (translations[key]) {
+            el.title = translations[key];
+        }
+    });
+
+    $$("[data-lang-content]").forEach(el => {
+        const key = el.getAttribute("data-lang-content");
+        if (translations[key]) {
+            const currentText = el.innerHTML;
+            const newText = translations[key] + currentText.substring(currentText.indexOf(':'));
+            el.innerHTML = newText;
+        }
+    });
+
+    $$("[data-lang-prefix]").forEach(el => {
+      const key = el.getAttribute("data-lang-prefix");
+      if (translations[key]) {
+          const span = el.querySelector('span');
+          const spanHtml = span ? span.outerHTML : '';
+          el.innerHTML = translations[key] + ' ' + spanHtml;
+      }
+    });
   }
 
   const uid = () => Math.random().toString(36).slice(2,10);
@@ -703,8 +1016,11 @@ dialog{ border:1px solid var(--glass-border); background:var(--glass); color:var
 
   function init(){
     ensureTypes(); loadHistory();
-    const l = localStorage.getItem(LS_KEYS.LAST_LANG) || "pl"; setLang(l);
-    $$("#langSwitcher button[data-lang]").forEach(btn=>{ btn.onclick = ()=> setLang(btn.dataset.lang); });
+    const l = localStorage.getItem(LS_KEYS.LAST_LANG) || "pl";
+    $$("#langContainer .flag-btn").forEach(btn => {
+        btn.onclick = () => setLang(btn.dataset.langKey.toLowerCase());
+    });
+    setLang(l);
 
     $("#operator") && ($("#operator").value = localStorage.getItem(LS_KEYS.LAST_OPERATOR) || "");
     $("#station") && ($("#station").value  = localStorage.getItem(LS_KEYS.LAST_STATION)  || "");
