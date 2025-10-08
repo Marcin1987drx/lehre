@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8"/>
+<title>Software Checker – Wersja SharePoint</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f8; --card: #ffffff; --muted: #62758a; --line: #e3e8ed;
+    --ok: #34d399; --nok: #f87171; --title: #1f2937; --text: #374151;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--text); margin: 24px; line-height: 1.6;
+  }
+  .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+  .card { background: var(--card); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
+  .hidden { display: none; }
+  .header { text-align: center; margin-bottom: 24px; }
+  .header h1 { font-size: 32px; font-weight: 700; color: var(--title); margin: 0; }
+  .header p { font-size: 16px; color: var(--muted); margin: 8px 0 0; }
+  label { font-weight: 600; color: var(--title); margin-bottom: 8px; display: block; }
+  button {
+    padding: 12px 20px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); cursor: pointer; box-shadow: var(--shadow);
+    transition: all 0.2s ease-in-out; font-size: 14px; font-weight: 600; color: var(--text);
+  }
+  button:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  input[type="text"] {
+    width: 100%; max-width: 520px; font-size: 16px; padding: 14px 16px;
+    border: 1px solid var(--line); border-radius: 12px; background: #fff;
+  }
+  table {
+    border-collapse: separate; border-spacing: 0; width: 100%; margin-top: 24px;
+    background: var(--card); border-radius: 16px; overflow: hidden;
+  }
+  th { background: #eef2f6; padding: 12px 16px; text-align: center; font-weight: 600; }
+  td { border-top: 1px solid var(--line); padding: 14px 16px; text-align: center; }
+  .ok { color: var(--ok); font-weight: 700; }
+  .nok { color: var(--nok); font-weight: 700; }
+  .pill {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--text); background: #f8fafc;
+    font-size: 12px; font-weight: 500;
+  }
+  .meta { color: var(--muted); font-size: 13px; }
+  .footer { text-align: center; margin-top: 48px; padding-top: 24px; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Ladedose BMW Software Checker</h1>
+        <p>Wersja zintegrowana z SharePoint</p>
+    </div>
+
+    <div id="authControls" class="card" style="text-align: center;">
+        <p>Aby rozpocząć, zaloguj się za pomocą swojego konta firmowego.</p>
+        <button id="signInButton">Zaloguj się</button>
+    </div>
+
+    <div id="app" class="hidden">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>Zalogowano jako: <b id="userName"></b></div>
+            <button id="signOutButton">Wyloguj</button>
+        </div>
+
+        <div class="card">
+            <label for="dmcInput">Wpisz / zeskanuj DMC</label>
+            <input id="dmcInput" type="text" placeholder="e.g. 2D5B8E1E201D..."/>
+            <p class="meta">Wyniki wyszukiwania pojawią się automatycznie poniżej.</p>
+        </div>
+
+        <div class="card" id="resultCard">
+            <div id="detail">
+                <p class="meta">Oczekiwanie na wprowadzenie numeru DMC...</p>
+            </div>
+        </div>
+    </div>
+    <div class="footer"><p>Stworzone przez Zespół Wsparcia Jakości</p></div>
+</div>
+
+<script src="https://alcdn.msauth.net/browser/2.32.2/js/msal-browser.min.js"></script>
+
+<script>
+// -----------------------------------------------------------------
+// ------ KONFIGURACJA – TE WARTOŚCI MUSISZ UZUPEŁNIĆ RĘCZNIE ------
+// -----------------------------------------------------------------
+const msalConfig = {
+    auth: {
+        // ID Aplikacji (Client ID) - uzyskane z Azure AD
+        clientId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", 
+        // ID Twojego Katalogu (Tenant ID)
+        authority: "https://login.microsoftonline.com/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        // Adres URL, gdzie znajduje się ten plik na SharePoincie
+        redirectUri: "https://twojafirma.sharepoint.com/sites/twojawitryna/Shared%20Documents/checker.html", 
+    }
+};
+
+const graphConfig = {
+    // Adres URL witryny SharePoint i ścieżki do folderów
+    // Format: "nazwafirmy.sharepoint.com:/sites/nazwawitryny"
+    siteUrl: "twojafirma.sharepoint.com:/sites/twojawitryna", 
+    // Ścieżka do folderu Settings wewnątrz biblioteki dokumentów
+    settingsPath: "/drives/b!xxxxxxxxxxxxxxxxxxxxxxxx/root:/Settings:/children",
+    // Ścieżka do folderu Reports wewnątrz biblioteki dokumentów
+    reportsPath: "/drives/b!xxxxxxxxxxxxxxxxxxxxxxxx/root:/Reports"
+};
+
+// Uprawnienia API, których potrzebuje aplikacja
+const graphScopes = ["user.read", "sites.read.all"];
+// -----------------------------------------------------------------
+
+
+// Inicjalizacja klienta MSAL
+const msalClient = new msal.PublicClientApplication(msalConfig);
+
+// Elementy UI
+const ui = {
+    signInButton: document.getElementById('signInButton'),
+    signOutButton: document.getElementById('signOutButton'),
+    authControls: document.getElementById('authControls'),
+    appDiv: document.getElementById('app'),
+    userNameP: document.getElementById('userName'),
+    dmcInput: document.getElementById('dmcInput'),
+    detailDiv: document.getElementById('detail'),
+};
+
+// --- Funkcje pomocnicze do parsowania XML (bez zmian) ---
+const parseXML = txt => new DOMParser().parseFromString(txt,"text/xml");
+function canonHex(s){ const only = (s||"").toUpperCase().replace(/[^0-9A-F]/g,""); return (only.match(/.{1,2}/g) || []).join(" "); }
+const eqHex = (a,b) => canonHex(a) === canonHex(b);
+function parseIdToHex(id){ if(!id) return ""; const p = id.split("_"); if(p.length < 3) return ""; let m = p[1].replace(/[^0-9A-Fa-f]/g,""); if(m.length > 4) m = m.slice(-4); const mb = m.match(/.{1,2}/g) || []; const db = p[2].split(".").map(d => Number.parseInt(d,10).toString(16).padStart(2,"0").toUpperCase()); return canonHex([...mb, ...db].join("")); }
+function extractBytesFromTeststep(t){ const m = (t||"").toUpperCase().match(/([0-9A-F]{2}(?:\s*[0-9A-F]{2}){2,})/); return m ? canonHex(m[1]) : ""; }
+
+
+// --- Funkcje do komunikacji z Microsoft Graph API ---
+async function callGraphApi(endpoint, token) {
+    const headers = new Headers({ "Authorization": `Bearer ${token}` });
+    const options = { method: "GET", headers: headers };
+    const response = await fetch(`https://graph.microsoft.com/v1.0/sites/${graphConfig.siteUrl}${endpoint}`, options);
+    if (!response.ok) throw new Error(`Błąd API Graph (${response.status}): ${await response.text()}`);
+    return response.json();
+}
+
+async function getXmlContent(downloadUrl, token) {
+    const headers = new Headers({ "Authorization": `Bearer ${token}` });
+    const options = { method: "GET", headers: headers };
+    const response = await fetch(downloadUrl, options);
+    if (!response.ok) throw new Error(`Błąd pobierania pliku: ${response.statusText}`);
+    return response.text();
+}
+
+// --- Główna logika aplikacji ---
+let settingsBySnr = {};
+let searchTimeout;
+
+async function loadSettings() {
+    ui.detailDiv.innerHTML = `<p class="meta">Ładowanie plików konfiguracyjnych (Settings)...</p>`;
+    try {
+        const token = await getToken();
+        const response = await callGraphApi(graphConfig.settingsPath, token);
+        
+        for (const file of response.value) {
+            if (!file.name.toLowerCase().endsWith('.xml')) continue;
+            
+            const content = await getXmlContent(file['@microsoft.graph.downloadUrl'], token);
+            const doc = parseXML(content);
+
+            for(const hw of Array.from(doc.getElementsByTagName("hardware"))){
+                const snr = hw.getAttribute("snr");
+                if(!snr) continue;
+                const vals = { snr, fileName: file.name, HWEL:"", BTLD:"", SWFL:"" };
+                for(const te of Array.from(hw.getElementsByTagName("te"))){
+                    const id = (te.getAttribute("id")||"").toUpperCase();
+                    if(id.startsWith("HWEL")) vals.HWEL = parseIdToHex(id);
+                    if(id.startsWith("BTLD")) vals.BTLD = parseIdToHex(id);
+                    if(id.startsWith("SWFL")) vals.SWFL = parseIdToHex(id);
+                }
+                settingsBySnr[snr] = vals;
+            }
+        }
+        ui.detailDiv.innerHTML = `<p class="meta">Gotowe. Wprowadź numer DMC.</p>`;
+        console.log(`Załadowano ustawienia dla ${Object.keys(settingsBySnr).length} unikalnych SNR.`);
+    } catch (error) {
+        console.error("Błąd podczas ładowania ustawień:", error);
+        ui.detailDiv.innerHTML = `<p class="nok">Błąd krytyczny podczas ładowania plików Settings. Sprawdź konsolę (F12) i konfigurację.</p>`;
+    }
+}
+
+async function searchAndCompare(dmc) {
+    if (dmc.length < 15) {
+        ui.detailDiv.innerHTML = `<p class="meta">Oczekiwanie na wprowadzenie numeru DMC...</p>`;
+        return;
+    }
+    ui.detailDiv.innerHTML = `<p class="meta">Szukanie raportu dla ${dmc}...</p>`;
+
+    try {
+        const token = await getToken();
+        const searchEndpoint = `${graphConfig.reportsPath}:/search(q='${dmc}')`;
+        const response = await callGraphApi(searchEndpoint, token);
+
+        if (response.value.length === 0) {
+            ui.detailDiv.innerHTML = `<p class="nok">Nie znaleziono raportu dla DMC: ${dmc}</p>`;
+            return;
+        }
+
+        const reportFile = response.value[0];
+        const reportContent = await getXmlContent(reportFile['@microsoft.graph.downloadUrl'], token);
+        const doc = parseXML(reportContent);
+        
+        let snr = "";
+        for (const i of Array.from(doc.getElementsByTagName("info"))) {
+            if (i.getElementsByTagName("name")[0]?.textContent?.trim() === "BMW PartNumber") {
+                snr = i.getElementsByTagName("description")[0]?.textContent?.trim() || "";
+            }
+        }
+
+        let HWEL = "", BTLD = "", SWFL = "";
+        for (const s of Array.from(doc.getElementsByTagName("teststep"))) {
+            const t = s.textContent || "";
+            if (/HWEL/i.test(t)) HWEL = extractBytesFromTeststep(t);
+            if (/BTLD/i.test(t)) BTLD = extractBytesFromTeststep(t);
+            if (/SWFL/i.test(t)) SWFL = extractBytesFromTeststep(t);
+        }
+
+        const reportData = { dmc, snr, HWEL, BTLD, SWFL, fileName: reportFile.name };
+        const settingsData = settingsBySnr[snr];
+        renderDetail(reportData, settingsData);
+
+    } catch (error) {
+        console.error("Błąd podczas wyszukiwania raportu:", error);
+        ui.detailDiv.innerHTML = `<p class="nok">Błąd podczas wyszukiwania. Sprawdź konsolę (F12).</p>`;
+    }
+}
+
+function renderDetail(rep, set) {
+    let html = `<h3>DMC: ${rep.dmc}</h3><div class="meta">SNR: <span class="pill">${rep.snr || "N/A"}</span> · Plik raportu: ${rep.fileName}</div>`;
+
+    if (!set) {
+        html += `<p class="nok" style="margin-top:10px;">Nie znaleziono dopasowania w plikach Settings dla SNR: <strong>${rep.snr || "(brak)"}</strong></p>`;
+        ui.detailDiv.innerHTML = html; return;
+    }
+    
+    html += `<div class="meta">Plik ustawień: ${set.fileName}</div>`
+
+    const rows = [
+        ["HWEL", rep.HWEL, set.HWEL, eqHex(rep.HWEL, set.HWEL)],
+        ["BTLD", rep.BTLD, set.BTLD, eqHex(rep.BTLD, set.BTLD)],
+        ["SWFL", rep.SWFL, set.SWFL, eqHex(rep.SWFL, set.SWFL)]
+    ];
+
+    html += `<table><tr><th>Pole</th><th>Wartość z Raportu</th><th>Wartość z Ustawień</th><th>Wynik</th></tr>
+    ${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]||""}</td><td>${r[2]||""}</td><td>${r[3] ? '<span class="ok">OK</span>':'<span class="nok">NOK</span>'}</td></tr>`).join("")}</table>`;
+    ui.detailDiv.innerHTML = html;
+}
+
+// --- Logika autoryzacji MSAL ---
+async function getToken() {
+    const account = msalClient.getAllAccounts()[0];
+    if (!account) { throw new Error("Użytkownik nie jest zalogowany!"); }
+    
+    const request = { scopes: graphScopes, account: account };
+    try {
+        const response = await msalClient.acquireTokenSilent(request);
+        return response.accessToken;
+    } catch (error) {
+        if (error instanceof msal.InteractionRequiredAuthError) {
+            const response = await msalClient.acquireTokenPopup(request);
+            return response.accessToken;
+        }
+        throw error;
+    }
+}
+
+function updateUI() {
+    const account = msalClient.getAllAccounts()[0];
+    if (account) {
+        ui.authControls.classList.add('hidden');
+        ui.appDiv.classList.remove('hidden');
+        ui.userNameP.textContent = account.username;
+        loadSettings();
+    } else {
+        ui.authControls.classList.remove('hidden');
+        ui.appDiv.classList.add('hidden');
+    }
+}
+
+// --- Event Listeners ---
+ui.signInButton.addEventListener('click', async () => {
+    try {
+        await msalClient.loginPopup({ scopes: graphScopes });
+        updateUI();
+    } catch (error) { console.error("Błąd logowania:", error); }
+});
+ui.signOutButton.addEventListener('click', () => {
+    msalClient.logoutPopup();
+});
+ui.dmcInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const dmcValue = e.target.value;
+    searchTimeout = setTimeout(() => searchAndCompare(dmcValue), 500); // Czekaj 500ms po ostatnim znaku
+});
+
+// --- Start aplikacji ---
+updateUI();
+
+</script>
+</body>
+</html>
